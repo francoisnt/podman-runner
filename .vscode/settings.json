@@ -1,0 +1,21 @@
+{
+   "python.pipenvPath": "env",
+   "[python]": {
+      "editor.formatOnSave": true,
+      "editor.defaultFormatter": "charliermarsh.ruff",
+      "editor.codeActionsOnSave": {
+         "source.fixAll": "always", // lint autofixes (optional)
+         "source.organizeImports": "always" // import sort/dedupe (optional)
+      }
+   },
+   "python.testing.pytestArgs": [
+      "tests"
+   ],
+   "python.testing.unittestEnabled": false,
+   "python.testing.pytestEnabled": true,
+   "python.defaultInterpreterPath": ".venv/bin/python",
+   // Mypy
+   "mypy-type-checker.importStrategy": "fromEnvironment",
+   "ruff.configurationPreference": "filesystemFirst",
+   "ruff.format.backend": "uv",
+}
