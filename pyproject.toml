@@ -58,7 +58,8 @@ testpaths = ["tests/"]
 pythonpath = ["src"]
 
 [tool.mypy]
-files = ["src", "tests", "example"]
+packages = ["src.podman_py", "tests", "examples"]
+no_site_packages = true
 warn_unused_configs = true
 strict = true
 
