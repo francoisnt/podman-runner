@@ -10,6 +10,9 @@ from typing import Any
 from .helpers import get_podman_exe
 from .preflight import run_preflight_checks
 
+__all__ = ["Container", "ContainerConfig"]
+
+
 # Run preflight checks on import
 run_preflight_checks()
 
@@ -85,7 +88,7 @@ class Container:
             "run",
             "-d",
             "--name",
-            f"podman-test-{self.config.name}",
+            self.config.name,
         ]
 
         # Ports
@@ -112,11 +115,13 @@ class Container:
         for host_path, container_path in (self.config.volumes or {}).items():
             cmd += ["-v", f"{host_path}:{container_path}:ro"]
 
+        # Image
+        cmd.append(self.config.image)
+
         # Command override
         if self.config.command:
-            cmd += ["--", *self.config.command]
+            cmd += [*self.config.command]
 
-        cmd.append(self.config.image)
         return cmd
 
     # --------------------------------------------------------------------- #
@@ -131,9 +136,30 @@ class Container:
             text=True,
             check=True,
         )
+
+        if result.returncode != 0:
+            raise RuntimeError(f"Failed to start container: {result.stderr}")
+
         self.container_id = result.stdout.strip()
+
+        if not self.container_id:
+            raise RuntimeError("Container started but no ID returned")
+
         self._wait_for_ready()
         return self
+
+    def check_status(self) -> str:
+        """Check container status."""
+        if not self.container_id:
+            return "Not running"
+
+        result = subprocess.run(  # noqa: S603
+            [self._get_podman(), "inspect", self.container_id, "--format", "'{{.State.Status}}'"],
+            capture_output=True,
+            text=True,
+        )
+
+        return result.stdout
 
     def _wait_for_ready(self) -> None:
         """Poll health_cmd until success or timeout."""
@@ -166,12 +192,18 @@ class Container:
         """Run command inside container."""
         if not self.container_id:
             raise RuntimeError("Container not started")
-        return subprocess.run(  # noqa: S603
-            [self._get_podman(), "exec", self.container_id, *cmd],
-            check=True,
-            capture_output=True,
-            text=True,
-        )
+        try:
+            return subprocess.run(  # noqa: S603
+                [self._get_podman(), "exec", self.container_id, *cmd],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+        except subprocess.CalledProcessError as e:
+            raise RuntimeError(
+                f"Command {' '.join(cmd)!r} failed in container {self.config.name}:\n"
+                f"stdout: {e.stdout}\nstderr: {e.stderr}"
+            ) from e
 
     def logs(self, follow: bool = False, tail: int | None = None) -> str:
         """Get the container logs."""
