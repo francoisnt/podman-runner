@@ -63,5 +63,5 @@ warn_unused_configs = true
 strict = true
 
 [tool.taskipy.tasks]
-unittest = "pytest tests/unit --cov=podman_py -n auto --dist=loadscope -v"
+unittest = "pytest tests/unit --cov=podman_py --cov-report=term-missing -n auto --dist=loadscope -v"
 integrationtest = "pytest tests/integration --cov=podman_py -n auto --dist=loadscope -v"

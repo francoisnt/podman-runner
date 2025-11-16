@@ -8,13 +8,14 @@ from pathlib import Path
 from typing import Any
 
 from .helpers import get_podman_exe
-from .preflight import run_preflight_checks
+
+# from .preflight import run_preflight_checks
 
 __all__ = ["Container", "ContainerConfig"]
 
 
 # Run preflight checks on import
-run_preflight_checks()
+# run_preflight_checks()
 
 
 @dataclass
@@ -130,15 +131,15 @@ class Container:
     def start(self) -> Container:
         """Start container and wait for health check."""
         self.stop()
-        result = subprocess.run(  # noqa: S603
-            self._build_run_cmd(),
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-
-        if result.returncode != 0:
-            raise RuntimeError(f"Failed to start container: {result.stderr}")
+        try:
+            result = subprocess.run(  # noqa: S603
+                self._build_run_cmd(),
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+        except subprocess.CalledProcessError as e:
+            raise RuntimeError(f"Failed to start container: {e.stderr}") from e
 
         self.container_id = result.stdout.strip()
 

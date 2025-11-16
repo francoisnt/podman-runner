@@ -12,3 +12,6 @@ wheels/
 
 # mypy
 .mypy_cache/
+
+# pytest
+.coverage
