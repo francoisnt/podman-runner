@@ -1,4 +1,4 @@
-from src.podman_py.core import Container, ContainerConfig
+from podman_py import Container, ContainerConfig
 
 config: ContainerConfig = ContainerConfig(
     name="test",
