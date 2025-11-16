@@ -8,9 +8,9 @@ repos:
         types: [python]
         pass_filenames: true
 
-      - id: pytest
-        name: Pytest (pre-push)
-        entry: uv run pytest -q
+      - id: unittests
+        name: Unit tests
+        entry: uv run task unittest
         language: system
         pass_filenames: false
 

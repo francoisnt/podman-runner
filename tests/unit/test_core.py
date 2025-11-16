@@ -241,7 +241,7 @@ def test_wait_for_ready_timeout(config: ContainerConfig) -> None:
     c.container_id = "abc123"
     c.config.health_cmd = ["false"]
     mock = MagicMock(return_value=subprocess.CompletedProcess([], 1))
-    time_values = [0] + list(range(1, 32))
+    time_values = [0, *list(range(1, 32))]
     with (
         patch("subprocess.run", mock),
         patch("time.time", side_effect=time_values),

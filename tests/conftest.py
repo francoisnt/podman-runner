@@ -99,7 +99,7 @@ def data_file(tmp_path_factory_safe: Path) -> Path:
 def cleanup_stale_containers(podman_exe: str) -> Generator[None, None, None]:
     yield
     # After all tests
-    subprocess.run(
+    subprocess.run(  # noqa: S603
         [podman_exe, "rm", "-f", "--filter", f"name=^{TEST_CONTAINER_PREFIX}alpine-"],
         check=False,
     )
