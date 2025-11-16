@@ -51,6 +51,25 @@ def test_build_run_cmd_with_ports(config: ContainerConfig) -> None:
     assert "9001:8081" in " ".join(cmd)  # dynamic port
 
 
+def test_build_run_cmd_with_env(config: ContainerConfig) -> None:
+    config.env = {"MY_VAR": "value1"}
+    c = Container(config)
+    with patch.object(c, "_get_podman", return_value="podman"):
+        cmd = c._build_run_cmd()
+    assert "-e" in cmd
+    assert "MY_VAR=value1" in cmd
+
+
+def test_build_run_cmd_with_multiple_env(config: ContainerConfig) -> None:
+    config.env = {"VAR1": "val1", "VAR2": "val2"}
+    c = Container(config)
+    with patch.object(c, "_get_podman", return_value="podman"):
+        cmd = c._build_run_cmd()
+    assert cmd.count("-e") == 2
+    assert "VAR1=val1" in cmd
+    assert "VAR2=val2" in cmd
+
+
 def test_build_run_cmd_with_init_scripts(
     config: ContainerConfig,
     tmp_init_dir: Path,
@@ -74,6 +93,15 @@ def test_build_run_cmd_missing_init_script(
     with patch.object(c, "_get_podman", return_value="podman"):
         with pytest.raises(FileNotFoundError):
             c._build_run_cmd()
+
+
+def test_build_run_cmd_with_volumes(config: ContainerConfig) -> None:
+    config.volumes = {Path("/host/path"): "/container/path"}
+    c = Container(config)
+    with patch.object(c, "_get_podman", return_value="podman"):
+        cmd = c._build_run_cmd()
+    assert "-v" in cmd
+    assert f"{Path('/host/path')}:/container/path:ro" in " ".join(cmd)
 
 
 def test_container_start_stop(config: ContainerConfig) -> None:
@@ -313,6 +341,21 @@ def test_context_manager_execution(config: ContainerConfig) -> None:
             assert c.container_id == "abc123"
 
         assert c.container_id is None
+
+
+def test_exec_raises_when_container_not_started(config: ContainerConfig) -> None:
+    c = Container(config)
+    # container_id is None → not started
+    with pytest.raises(RuntimeError, match="Container not started"):
+        c.exec(["echo", "hello"])
+
+
+def test_logs_raises_when_container_not_started(config: ContainerConfig) -> None:
+    """Ensure logs() raises when container_id is None."""
+    c = Container(config)
+    # container_id is None → container not started
+    with pytest.raises(RuntimeError, match="Container not started"):
+        c.logs()
 
 
 def test_repr_execution_running(config: ContainerConfig) -> None:
