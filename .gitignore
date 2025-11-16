@@ -14,4 +14,4 @@ wheels/
 .mypy_cache/
 
 # pytest
-.coverage
+.coverage*
