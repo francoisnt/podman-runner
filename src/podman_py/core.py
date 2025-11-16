@@ -8,14 +8,13 @@ from pathlib import Path
 from typing import Any
 
 from .helpers import get_podman_exe
-
-# from .preflight import run_preflight_checks
+from .preflight import run_preflight_checks
 
 __all__ = ["Container", "ContainerConfig"]
 
 
 # Run preflight checks on import
-# run_preflight_checks()
+run_preflight_checks()
 
 
 @dataclass
