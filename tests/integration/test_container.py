@@ -30,14 +30,17 @@ def podman_container(
 
 class TestAlpineContainerBasics:
     def test_container_starts_and_has_id(self, podman_container: Container) -> None:
+        """Ensure container is started and has a valid container ID."""
         assert podman_container.container_id is not None
 
     def test_container_repr_includes_name(
         self, podman_container: Container, container_prefix: str
     ) -> None:
+        """Check that the container's repr includes its name."""
         assert podman_container.config.name in podman_container.__repr__()
 
     def test_container_can_exec_command(self, podman_container: Container) -> None:
+        """Verify the container can execute commands and return output."""
         result = podman_container.exec(["echo", "hello"])
         assert result.stdout.strip() == "hello"
         assert result.returncode == 0
@@ -45,6 +48,7 @@ class TestAlpineContainerBasics:
 
 class TestDoubleStart:
     def test_container_double_start(self, podman_container: Container) -> None:
+        """Test that calling start again creates a new container instance."""
         assert podman_container.container_id is not None
         first_id = podman_container.container_id
         podman_container.start()  # should stop old one
@@ -54,6 +58,7 @@ class TestDoubleStart:
 
 class TestLyfecycle:
     def test_container_double_start(self, podman_container: Container, podman_exe: str) -> None:
+        """Test that stopping the container removes it from podman ps --all."""
         assert podman_container.container_id is not None
         c_id: str = podman_container.container_id
 
