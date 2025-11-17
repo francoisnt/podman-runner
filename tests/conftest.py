@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import shutil
 import subprocess
-import tempfile
 from collections.abc import Generator
 from pathlib import Path
 
 import pytest
+
+from podman_py.helpers import tmp_path_factory_safe
 
 podman_path = shutil.which("podman")
 if not podman_path:
@@ -34,37 +35,15 @@ def container_prefix() -> str:
 
 # Safe, Self-Contained Temp Path Fixtures
 @pytest.fixture(scope="session")
-def tmp_path_factory_safe() -> Generator[Path, None, None]:
-    """Create a unique temporary directory for the entire test session."""
-    try:
-        temp_dir_str = tempfile.mkdtemp(prefix="podman_py_test_")
-        temp_dir = Path(temp_dir_str)
-    except (OSError, PermissionError) as e:
-        raise RuntimeError(
-            f"Failed to create temporary directory for tests: {e}\n"
-            "Check disk space, permissions, and TMPDIR environment variable."
-        ) from e
-
-    if not temp_dir.is_dir():
-        raise RuntimeError(f"Expected temp directory not created: {temp_dir}")
-
-    yield temp_dir
-
-    #  Cleanup: Fail loudly if cleanup fails
-    try:
-        shutil.rmtree(temp_dir)
-    except Exception as e:
-        import warnings
-
-        warnings.warn(
-            f"Failed to clean up test temp dir {temp_dir}: {e}", ResourceWarning, stacklevel=2
-        )
+def tmp_path() -> Generator[Path, None, None]:
+    with tmp_path_factory_safe(prefix="podman_py_test_") as session_tmp_path:
+        yield session_tmp_path
 
 
 @pytest.fixture
-def tmp_init_dir(tmp_path_factory_safe: Path) -> Path:
+def tmp_init_dir(tmp_path: Path) -> Path:
     """Create a temp dir for init scripts."""
-    init_dir = tmp_path_factory_safe / "init.d"
+    init_dir = tmp_path / "init.d"
     init_dir.mkdir(exist_ok=True)
     return init_dir
 
@@ -88,9 +67,9 @@ def bad_script(tmp_init_dir: Path) -> Path:
 
 
 @pytest.fixture
-def data_file(tmp_path_factory_safe: Path) -> Path:
+def data_file(tmp_path: Path) -> Path:
     """Create a generic data file for volume tests."""
-    file = tmp_path_factory_safe / "data.txt"
+    file = tmp_path / "data.txt"
     file.write_text("hello from host\n")
     return file
 

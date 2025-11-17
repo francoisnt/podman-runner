@@ -101,7 +101,7 @@ def test_build_run_cmd_with_volumes(config: ContainerConfig) -> None:
     with patch.object(c, "_get_podman", return_value="podman"):
         cmd = c._build_run_cmd()
     assert "-v" in cmd
-    assert f"{Path('/host/path')}:/container/path:ro" in " ".join(cmd)
+    assert f"{Path('/host/path')}:/container/path" in " ".join(cmd)
 
 
 def test_container_start_stop(config: ContainerConfig) -> None:

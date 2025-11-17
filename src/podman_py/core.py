@@ -113,7 +113,7 @@ class Container:
 
         # === GENERAL VOLUMES ===
         for host_path, container_path in (self.config.volumes or {}).items():
-            cmd += ["-v", f"{host_path}:{container_path}:ro"]
+            cmd += ["-v", f"{host_path}:{container_path}"]
 
         # Image
         cmd.append(self.config.image)

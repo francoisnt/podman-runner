@@ -240,7 +240,7 @@ def test_check_storage_writable_not_writable(
 ) -> None:
     """GraphRoot exists but not writable → fail."""
     graph_root = tmp_path / "podman"
-    graph_root.mkdir()
+    graph_root.mkdir(exist_ok=True)
     # Make it read-only
     graph_root.chmod(0o555)
 
@@ -265,7 +265,8 @@ def test_check_storage_writable_missing_path(monkeypatch: pytest.MonkeyPatch) ->
     with patch("podman_py.preflight._fail", side_effect=mock_fail) as fail_mock:
         with pytest.raises(RuntimeError, match="FAIL: Podman storage path missing"):
             _check_storage_writable()
-    fail_mock.assert_called_once()
+
+    fail_mock.assert_called_once_with("Podman storage path missing: /nonexistent/podman")
 
 
 def test_check_storage_writable_command_fails(monkeypatch: pytest.MonkeyPatch) -> None:
