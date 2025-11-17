@@ -31,9 +31,5 @@ with tmp_path_factory_safe("scripts") as tmp_dir:
 
     with Container(config) as c:
         print(f"Postgres with init scripts started: {c.container_id}")
-        # Wait a moment for init
-        # import time
-
-        # time.sleep(3)
         result = c.exec(["psql", "-U", "postgres", "-c", "\\dt"])
         print(result.stdout)
