@@ -208,9 +208,9 @@ def test_container_logs_with_options(config: ContainerConfig) -> None:
 def test_container_check_status_running(config: ContainerConfig) -> None:
     c = Container(config)
     c.container_id = "abc123"
-    mock = MagicMock(stdout="'running'\n")
+    mock = MagicMock(stdout="running")
     with patch("subprocess.run", return_value=mock):
-        assert c.check_status() == "'running'\n"
+        assert c.check_status() == "running"
 
 
 def test_container_check_status_not_running(config: ContainerConfig) -> None:

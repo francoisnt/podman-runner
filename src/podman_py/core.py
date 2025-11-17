@@ -5,7 +5,8 @@ import subprocess
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from threading import Lock
+from typing import Any, ClassVar
 
 from .helpers import get_podman_exe
 from .preflight import run_preflight_checks
@@ -31,6 +32,7 @@ class ContainerConfig:
 
     name: str
     image: str
+    health_timeout: int = 30
     ports: dict[int, int | None] | None = None  # {internal: host | None}
     env: dict[str, str] | None = None
     init_dir: str | None = None  # e.g. "/docker-entrypoint-initdb.d"
@@ -44,6 +46,8 @@ class Container:
     """Lifecycle-managed Podman container with context manager support."""
 
     _podman_exe: str | None = None
+    _port_lock = Lock()
+    _used_ports: ClassVar[set[int]] = set()
 
     def __init__(self, config: ContainerConfig):
         """Initialize a container."""
@@ -64,11 +68,15 @@ class Container:
     # Dynamic port binding
     # --------------------------------------------------------------------- #
     def _find_free_port(self) -> int:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.bind(("", 0))
-            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            _, port = s.getsockname()
-            return int(port)
+        with self._port_lock:
+            while True:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.bind(("", 0))
+                    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                    _, port = s.getsockname()
+                if port not in self._used_ports:
+                    self._used_ports.add(port)
+                    return int(port)
 
     def get_port(self, internal_port: int) -> int:
         """Return host port mapped to internal port."""
@@ -104,7 +112,7 @@ class Container:
         if self.config.init_dir and self.config.init_scripts:
             init_dir = self.config.init_dir.rstrip("/")
             # Sort for deterministic order
-            for i, script_path in enumerate(sorted(self.config.init_scripts)):
+            for i, script_path in enumerate(self.config.init_scripts):
                 if not script_path.is_file():
                     raise FileNotFoundError(f"Init script not found: {script_path}")
                 filename = f"{i:02d}-{script_path.name}"
@@ -154,18 +162,18 @@ class Container:
             return "Not running"
 
         result = subprocess.run(  # noqa: S603
-            [self._get_podman(), "inspect", self.container_id, "--format", "'{{.State.Status}}'"],
+            [self._get_podman(), "inspect", self.container_id, "--format", "{{.State.Status}}"],
             capture_output=True,
             text=True,
         )
 
-        return result.stdout
+        return result.stdout.strip()
 
     def _wait_for_ready(self) -> None:
         """Poll health_cmd until success or timeout."""
         if not self.config.health_cmd or not self.container_id:
             return
-        deadline = time.time() + 30
+        deadline = time.time() + (self.config.health_timeout)
         while time.time() < deadline:
             result = subprocess.run(  # noqa: S603
                 [self._get_podman(), "exec", self.container_id, *self.config.health_cmd],
@@ -178,6 +186,9 @@ class Container:
 
     def stop(self) -> None:
         """Stop and remove container."""
+        for host_port in self._host_ports.values():
+            Container._used_ports.discard(host_port)
+
         if not self.container_id:
             return
         subprocess.run(  # noqa: S603

@@ -57,7 +57,7 @@ class TestDoubleStart:
 
 
 class TestLyfecycle:
-    def test_container_double_start(self, podman_container: Container, podman_exe: str) -> None:
+    def test_container_stop(self, podman_container: Container, podman_exe: str) -> None:
         """Test that stopping the container removes it from podman ps --all."""
         assert podman_container.container_id is not None
         c_id: str = podman_container.container_id
