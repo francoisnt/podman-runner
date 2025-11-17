@@ -33,6 +33,7 @@ class ContainerConfig:
     name: str
     image: str
     health_timeout: int = 30
+    health_interval: float = 1.0
     ports: dict[int, int | None] | None = None  # {internal: host | None}
     env: dict[str, str] | None = None
     init_dir: str | None = None  # e.g. "/docker-entrypoint-initdb.d"
@@ -146,7 +147,13 @@ class Container:
                 check=True,
             )
         except subprocess.CalledProcessError as e:
-            raise RuntimeError(f"Failed to start container: {e.stderr}") from e
+            cmd_str = " ".join(self._build_run_cmd())
+            raise RuntimeError(
+                f"Failed to start container {self.config.name!r}:\n"
+                f"Command: {cmd_str}\n"
+                f"stdout: {e.stdout}\n"
+                f"stderr: {e.stderr}"
+            ) from e
 
         self.container_id = result.stdout.strip()
 
@@ -181,7 +188,7 @@ class Container:
             )
             if result.returncode == 0:
                 return
-            time.sleep(1)
+            time.sleep(self.config.health_interval)
         raise TimeoutError(f"Container {self.config.name} did not become ready in 30s")
 
     def stop(self) -> None:
