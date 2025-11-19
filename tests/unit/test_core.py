@@ -1,7 +1,6 @@
 # tests/unit/test_core_mocked.py
 from __future__ import annotations
 
-import socket
 import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock, call, patch
@@ -36,19 +35,6 @@ def test_build_run_cmd_no_options(container_prefix: str, config: ContainerConfig
         "10",
     ]
     assert cmd == expected
-
-
-def test_build_run_cmd_with_ports(config: ContainerConfig) -> None:
-    config.ports = {8080: 80, 8081: None}
-    c = Container(config)
-    with (
-        patch.object(c, "_get_podman", return_value="podman"),
-        patch.object(c, "get_port", side_effect=lambda x: 9000 + (x - 8080)),
-    ):
-        cmd = c._build_run_cmd()
-    assert "-p" in cmd
-    assert "80:8080" in cmd
-    assert "9001:8081" in " ".join(cmd)  # dynamic port
 
 
 def test_build_run_cmd_with_env(config: ContainerConfig) -> None:
@@ -280,31 +266,6 @@ def test_repr_running(config: ContainerConfig) -> None:
 def test_repr_stopped(config: ContainerConfig) -> None:
     c = Container(config)
     assert repr(c) == f"<Container {c.config.name} [stopped] id=None>"
-
-
-def test_get_port_fixed(config: ContainerConfig) -> None:
-    config.ports = {1234: 5678}
-    c = Container(config)
-    assert c.get_port(1234) == 5678
-    assert c._host_ports == {1234: 5678}
-
-
-def test_get_port_dynamic(config: ContainerConfig) -> None:
-    config.ports = {1234: None}
-    c = Container(config)
-    with patch.object(c, "_find_free_port", return_value=9999):
-        assert c.get_port(1234) == 9999
-    assert c._host_ports == {1234: 9999}
-
-
-def test_find_free_port() -> None:
-    mock_sock = MagicMock()
-    mock_sock.getsockname.return_value = ("", 54321)
-    mock_sock.__enter__.return_value = mock_sock
-    mock_sock.__exit__.return_value = None
-    with patch.object(socket, "socket", return_value=mock_sock):
-        c = Container(ContainerConfig(name="x", image="y"))
-        assert c._find_free_port() == 54321
 
 
 def test_check_status_execution(config: ContainerConfig) -> None:

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import socket
 import subprocess
 import time
 from dataclasses import dataclass
@@ -54,7 +53,7 @@ class Container:
         """Initialize a container."""
         self.config = config
         self.container_id: str | None = None
-        self._host_ports: dict[int, int] = {}
+        self._port_mappings: dict[int, int] | None = None
 
     # --------------------------------------------------------------------- #
     # Podman executable
@@ -66,27 +65,44 @@ class Container:
         return Container._podman_exe
 
     # --------------------------------------------------------------------- #
-    # Dynamic port binding
+    # Port mapping
     # --------------------------------------------------------------------- #
-    def _find_free_port(self) -> int:
-        with self._port_lock:
-            while True:
-                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                    s.bind(("", 0))
-                    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                    _, port = s.getsockname()
-                if port not in self._used_ports:
-                    self._used_ports.add(port)
-                    return int(port)
-
     def get_port(self, internal_port: int) -> int:
-        """Return host port mapped to internal port."""
-        if internal_port not in self._host_ports:
-            host_port = (self.config.ports or {}).get(internal_port)
-            if host_port is None:
-                host_port = self._find_free_port()
-            self._host_ports[internal_port] = host_port
-        return self._host_ports[internal_port]
+        """Return the host port mapped to the given internal port."""
+        if self._port_mappings is None:
+            if not self.container_id:
+                raise RuntimeError("Container must be started before calling get_port")
+
+            output = subprocess.check_output(  # noqa: S603
+                [self._get_podman(), "port", self.container_id],
+                text=True,
+            )
+
+            mappings: dict[int, int] = {}
+            for line in output.splitlines():
+                line = line.strip()
+                if " -> " not in line:
+                    continue
+
+                left, right = line.split(" -> ", 1)
+
+                # Keep only digits from the left side → always gives the internal port
+                internal_str = "".join(c for c in left if c.isdigit())
+                if not internal_str:
+                    continue
+                internal = int(internal_str)
+
+                # Host side is always ...:XXXXX at the end
+                host = int(right.rsplit(":", 1)[-1])
+
+                mappings[internal] = host
+
+            self._port_mappings = mappings
+
+        if internal_port not in self._port_mappings:
+            raise KeyError(f"No port mapping found for internal port {internal_port}")
+
+        return self._port_mappings[internal_port]
 
     # --------------------------------------------------------------------- #
     # Build podman run command
@@ -102,7 +118,7 @@ class Container:
 
         # Ports
         for internal, host in (self.config.ports or {}).items():
-            host_port = host if host is not None else self.get_port(internal)
+            host_port = host if host is not None else ""
             cmd += ["-p", f"{host_port}:{internal}"]
 
         # Environment
@@ -193,9 +209,6 @@ class Container:
 
     def stop(self) -> None:
         """Stop and remove container."""
-        for host_port in self._host_ports.values():
-            Container._used_ports.discard(host_port)
-
         if not self.container_id:
             return
         subprocess.run(  # noqa: S603
@@ -205,6 +218,7 @@ class Container:
             [self._get_podman(), "rm", "-f", self.container_id], capture_output=True, check=False
         )
         self.container_id = None
+        self._port_mappings = None
 
     def exec(self, cmd: list[str]) -> subprocess.CompletedProcess[str]:
         """Run command inside container."""
