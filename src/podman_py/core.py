@@ -4,8 +4,7 @@ import subprocess
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from threading import Lock
-from typing import Any, ClassVar
+from typing import Any
 
 from .helpers import get_podman_exe
 from .preflight import run_preflight_checks
@@ -46,8 +45,6 @@ class Container:
     """Lifecycle-managed Podman container with context manager support."""
 
     _podman_exe: str | None = None
-    _port_lock = Lock()
-    _used_ports: ClassVar[set[int]] = set()
 
     def __init__(self, config: ContainerConfig):
         """Initialize a container."""
