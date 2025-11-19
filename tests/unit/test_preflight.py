@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from podman_py.preflight import (
+from podman_runner.preflight import (
     _check_docker_conflict,
     _check_podman_in_path,
     _check_podman_socket,
@@ -35,7 +35,7 @@ def mock_fail(msg: str) -> None:
 # --------------------------------------------------------------------------- #
 def test_run_preflight_checks_all_pass() -> None:
     """All checks pass → no failure."""
-    with patch("podman_py.preflight.CHECKS", []):
+    with patch("podman_runner.preflight.CHECKS", []):
         run_preflight_checks()  # Should not raise
 
 
@@ -46,8 +46,8 @@ def test_run_preflight_checks_one_fails() -> None:
         raise RuntimeError("boom")
 
     with (
-        patch("podman_py.preflight.CHECKS", [bad_check]),
-        patch("podman_py.preflight._fail", side_effect=mock_fail) as fail_mock,
+        patch("podman_runner.preflight.CHECKS", [bad_check]),
+        patch("podman_runner.preflight._fail", side_effect=mock_fail) as fail_mock,
     ):
         with pytest.raises(RuntimeError, match="FAIL: boom"):
             run_preflight_checks()
@@ -63,7 +63,7 @@ def test_check_snap_sandbox_not_snap(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_check_snap_sandbox_is_snap(monkeypatch: pytest.MonkeyPatch) -> None:
     """XDG_DATA_HOME contains 'snap' → fail."""
     monkeypatch.setenv("XDG_DATA_HOME", "/home/user/snap/vscodium/current")
-    with patch("podman_py.preflight._fail", side_effect=mock_fail) as fail_mock:
+    with patch("podman_runner.preflight._fail", side_effect=mock_fail) as fail_mock:
         with pytest.raises(RuntimeError, match="FAIL: Running inside Snap sandbox!"):
             _check_snap_sandbox()
     fail_mock.assert_called_once()
@@ -78,7 +78,7 @@ def test_check_podman_in_path_found(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_check_podman_in_path_not_found(monkeypatch: pytest.MonkeyPatch) -> None:
     """Podman not in PATH → fail."""
     monkeypatch.setattr("shutil.which", lambda x: None)
-    with patch("podman_py.preflight._fail", side_effect=mock_fail) as fail_mock:
+    with patch("podman_runner.preflight._fail", side_effect=mock_fail) as fail_mock:
         with pytest.raises(RuntimeError, match="FAIL: 'podman' not found in PATH"):
             _check_podman_in_path()
     fail_mock.assert_called_once()
@@ -108,7 +108,7 @@ def test_check_podman_version_old(monkeypatch: pytest.MonkeyPatch) -> None:
         return_value=subprocess.CompletedProcess([], 0, stdout="podman version 3.4.4\n")
     )
     monkeypatch.setattr("subprocess.run", mock)
-    with patch("podman_py.preflight._fail", side_effect=mock_fail) as fail_mock:
+    with patch("podman_runner.preflight._fail", side_effect=mock_fail) as fail_mock:
         with pytest.raises(RuntimeError, match="FAIL: podman >= 4.0 required"):
             _check_podman_version()
     fail_mock.assert_called_once()
@@ -132,7 +132,7 @@ def test_check_podman_socket_not_running(monkeypatch: pytest.MonkeyPatch) -> Non
     """Socket not running → fail."""
     mock = MagicMock(return_value=subprocess.CompletedProcess([], 0, stdout="false\n"))
     monkeypatch.setattr("subprocess.run", mock)
-    with patch("podman_py.preflight._fail", side_effect=mock_fail) as fail_mock:
+    with patch("podman_runner.preflight._fail", side_effect=mock_fail) as fail_mock:
         with pytest.raises(RuntimeError, match="FAIL: Podman socket not running"):
             _check_podman_socket()
     fail_mock.assert_called_once()
@@ -143,7 +143,7 @@ def test_check_podman_socket_command_fails(monkeypatch: pytest.MonkeyPatch) -> N
     mock = MagicMock(return_value=subprocess.CompletedProcess([], 1))
     monkeypatch.setattr("subprocess.run", mock)
 
-    with patch("podman_py.preflight._fail", side_effect=mock_fail) as fail_mock:
+    with patch("podman_runner.preflight._fail", side_effect=mock_fail) as fail_mock:
         with pytest.raises(RuntimeError, match="FAIL: Podman socket not running"):
             _check_podman_socket()
 
@@ -197,7 +197,7 @@ def test_check_wsl_shm_small_shm(monkeypatch: pytest.MonkeyPatch) -> None:
     original_new = Path.__new__
     monkeypatch.setattr(Path, "__new__", _wsl_path_new(original_new))
 
-    with patch("podman_py.preflight._fail", side_effect=mock_fail) as fail_mock:
+    with patch("podman_runner.preflight._fail", side_effect=mock_fail) as fail_mock:
         with pytest.raises(RuntimeError, match="FAIL: WSL2: /dev/shm too small"):
             _check_wsl_shm()
     fail_mock.assert_called_once()
@@ -249,7 +249,7 @@ def test_check_storage_writable_not_writable(
     )
     monkeypatch.setattr("subprocess.run", mock_info)
 
-    with patch("podman_py.preflight._fail", side_effect=mock_fail) as fail_mock:
+    with patch("podman_runner.preflight._fail", side_effect=mock_fail) as fail_mock:
         with pytest.raises(RuntimeError, match="FAIL: Podman storage not writable"):
             _check_storage_writable()
     fail_mock.assert_called_once()
@@ -262,7 +262,7 @@ def test_check_storage_writable_missing_path(monkeypatch: pytest.MonkeyPatch) ->
     )
     monkeypatch.setattr("subprocess.run", mock_info)
 
-    with patch("podman_py.preflight._fail", side_effect=mock_fail) as fail_mock:
+    with patch("podman_runner.preflight._fail", side_effect=mock_fail) as fail_mock:
         with pytest.raises(RuntimeError, match="FAIL: Podman storage path missing"):
             _check_storage_writable()
 
@@ -295,7 +295,7 @@ def test_check_docker_conflict_docker_present(monkeypatch: pytest.MonkeyPatch) -
     monkeypatch.setattr("shutil.which", lambda x: "/usr/bin/docker" if x == "docker" else None)
     monkeypatch.delenv("PODMAN_IGNORE_DOCKER", raising=False)
 
-    with patch("podman_py.preflight._fail", side_effect=mock_fail) as fail_mock:
+    with patch("podman_runner.preflight._fail", side_effect=mock_fail) as fail_mock:
         with pytest.raises(RuntimeError, match="FAIL: 'docker' CLI found in PATH"):
             _check_docker_conflict()
     fail_mock.assert_called_once()

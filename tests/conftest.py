@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from podman_py.helpers import tmp_path_factory_safe
+from podman_runner.helpers import tmp_path_factory_safe
 
 podman_path = shutil.which("podman")
 if not podman_path:
@@ -18,7 +18,7 @@ if not podman_path:
 
 # TEST CONSTANTS
 PODMAN_EXE = podman_path
-TEST_CONTAINER_PREFIX = "podman-py-integration-test"
+TEST_CONTAINER_PREFIX = "podman-runner-integration-test"
 
 
 @pytest.fixture(scope="session")
@@ -36,7 +36,7 @@ def container_prefix() -> str:
 # Safe, Self-Contained Temp Path Fixtures
 @pytest.fixture(scope="session")
 def tmp_path() -> Generator[Path, None, None]:
-    with tmp_path_factory_safe(prefix="podman_py_test_") as session_tmp_path:
+    with tmp_path_factory_safe(prefix="podman_runner_test_") as session_tmp_path:
         yield session_tmp_path
 
 

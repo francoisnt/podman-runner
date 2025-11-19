@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, call, patch
 
 import pytest
 
-from podman_py import Container, ContainerConfig
+from podman_runner import Container, ContainerConfig
 
 
 @pytest.fixture

@@ -1,5 +1,5 @@
 [project]
-name = "podman-py"
+name = "podman-runner"
 version = "0.1.0"
 description = "Generic Podman container runtime"
 readme = "README.md"
@@ -59,7 +59,7 @@ members = ["."]
 [tool.pytest.ini_options]
 testpaths = ["tests/"]
 pythonpath = ["src"]
-addopts = "--cov=podman_py --cov-report=term-missing -n auto --dist=loadscope"
+addopts = "--cov=podman_runner --cov-report=term-missing -n auto --dist=loadscope"
 
 [tool.mypy]
 files = ["src", "tests", "examples"]
@@ -67,5 +67,5 @@ warn_unused_configs = true
 strict = true
 
 [tool.taskipy.tasks]
-unittest = "pytest tests/unit "
-integrationtest = "pytest tests/integration"
+unit = "pytest tests/unit "
+integration = "pytest tests/integration"

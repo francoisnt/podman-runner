@@ -4,7 +4,7 @@ from functools import partial
 
 import pytest
 
-from podman_py import Container, ContainerConfig
+from podman_runner import Container, ContainerConfig
 
 
 @pytest.fixture(scope="class")

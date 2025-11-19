@@ -350,7 +350,7 @@ wheels = [
 ]
 
 [[package]]
-name = "podman-py"
+name = "podman-runner"
 version = "0.1.0"
 source = { editable = "." }
 

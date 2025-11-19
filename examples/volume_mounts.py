@@ -1,7 +1,7 @@
 """Mount host directories and files into container."""
 
-from podman_py import Container, ContainerConfig
-from podman_py.helpers import tmp_path_factory_safe
+from podman_runner import Container, ContainerConfig
+from podman_runner.helpers import tmp_path_factory_safe
 
 with tmp_path_factory_safe("host_data") as host_root:
     host_data = host_root / "data"

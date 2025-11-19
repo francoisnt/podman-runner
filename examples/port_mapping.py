@@ -1,6 +1,6 @@
 """Map fixed and dynamic ports, then access via host."""
 
-from podman_py import Container, ContainerConfig
+from podman_runner import Container, ContainerConfig
 
 config = ContainerConfig(
     name="port-example",

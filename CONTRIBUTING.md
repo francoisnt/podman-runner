@@ -1,4 +1,4 @@
-# Contributing to podman-py
+# Contributing to podman-runner
 
 Thanks for your interest in contributing! This guide will get you up and running in minutes.
 
@@ -20,8 +20,8 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/Francois-NT/podman-py.git
-cd podman-py
+git clone https://github.com/Francois-NT/podman-runner.git
+cd podman-runner
 
 # 2. Install dependencies + dev extras
 uv sync --all-extras

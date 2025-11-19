@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Wait for a service to be ready using a health command."""
 
-from podman_py import Container, ContainerConfig
+from podman_runner import Container, ContainerConfig
 
 config = ContainerConfig(
     name="health-example",
@@ -11,5 +11,5 @@ config = ContainerConfig(
 
 with Container(config) as c:
     print(f"Redis ready! ID: {c.container_id}")
-    result = c.exec(["redis-cli", "SET", "demo", "podman-py"])
+    result = c.exec(["redis-cli", "SET", "demo", "podman-runner"])
     print(f"SET result: {result.stdout.strip()}")
