@@ -51,7 +51,11 @@ def _example_files() -> list[Path]:
 # ------------------------------------------------------------------ #
 # Test each example
 # ------------------------------------------------------------------ #
-@pytest.mark.parametrize("example_file", _example_files())
+@pytest.mark.parametrize(
+    "example_file",
+    _example_files(),
+    ids=lambda p: p.name,
+)
 def test_example_runs_successfully(example_file: Path) -> None:
     print(f"\n=== Running example: {example_file.name} ===")
 

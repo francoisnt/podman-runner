@@ -70,34 +70,37 @@ class Container:
             if not self.container_id:
                 raise RuntimeError("Container must be started before calling get_port")
 
-            output = subprocess.check_output(  # noqa: S603
-                [self._get_podman(), "port", self.container_id],
+            tpl = (
+                "{{range $p, $bindings := .NetworkSettings.Ports}}"
+                "{{if $bindings}}"
+                "{{$p}}:{{(index $bindings 0).HostPort}}|"
+                "{{end}}{{end}}"
+            )
+
+            output = subprocess.check_output(
+                [self._get_podman(), "inspect", self.container_id, "--format", tpl],
                 text=True,
             )
 
             mappings: dict[int, int] = {}
-            for line in output.splitlines():
-                line = line.strip()
-                if " -> " not in line:
+            for part in output.split("|"):
+                part = part.strip()
+                if not part:  # skip empty parts completely
                     continue
-
-                left, right = line.split(" -> ", 1)
-
-                # Keep only digits from the left side → always gives the internal port
-                internal_str = "".join(c for c in left if c.isdigit())
-                if not internal_str:
+                if ":" not in part:  # safety – should never happen
                     continue
-                internal = int(internal_str)
-
-                # Host side is always ...:XXXXX at the end
-                host = int(right.rsplit(":", 1)[-1])
-
-                mappings[internal] = host
+                container_port_str, host_port_str = part.split(":", 1)
+                container_port = int(container_port_str.split("/")[0])
+                mappings[container_port] = int(host_port_str)
 
             self._port_mappings = mappings
 
         if internal_port not in self._port_mappings:
-            raise KeyError(f"No port mapping found for internal port {internal_port}")
+            available = ", ".join(f"{k}→{v}" for k, v in sorted(self._port_mappings.items()))
+            raise KeyError(
+                f"No port mapping for container port {internal_port}. "
+                f"Available: {available or 'none'}"
+            )
 
         return self._port_mappings[internal_port]
 
