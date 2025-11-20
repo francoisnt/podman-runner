@@ -20,5 +20,8 @@
    "ruff.format.backend": "uv",
    "terminal.integrated.env.linux": {
       "XDG_DATA_HOME": "${env:HOME}/.local/share"
-   }
+   },
+  "python.analysis.extraPaths": [
+    "./src"
+  ],
 }
