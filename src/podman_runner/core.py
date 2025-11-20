@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import json
 import subprocess
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict
 
 from .helpers import get_podman_exe
 from .preflight import run_preflight_checks
@@ -14,6 +15,11 @@ __all__ = ["Container", "ContainerConfig"]
 
 # Run preflight checks on import
 run_preflight_checks()
+
+
+class _Port_Binding(TypedDict):
+    HostIp: str
+    HostPort: str
 
 
 @dataclass
@@ -50,7 +56,7 @@ class Container:
         """Initialize a container."""
         self.config = config
         self.container_id: str | None = None
-        self._port_mappings: dict[int, int] | None = None
+        self._ports: dict[int, list[_Port_Binding]] | None = None
 
     # --------------------------------------------------------------------- #
     # Podman executable
@@ -64,45 +70,47 @@ class Container:
     # --------------------------------------------------------------------- #
     # Port mapping
     # --------------------------------------------------------------------- #
-    def get_port(self, internal_port: int) -> int:
+
+    def inspect_port_mappings(self) -> dict[int, list[_Port_Binding]]:
+        """Run `podman inspect` once and return a clean {container_port: host_port} dict."""
+        if self._ports is not None:
+            return self._ports
+
+        if not self.container_id:
+            raise RuntimeError("Container must be started before calling get_port")
+
+        output = subprocess.check_output(  # noqa: S603
+            [
+                self._get_podman(),
+                "inspect",
+                self.container_id,
+                "--format",
+                "{{json .NetworkSettings.Ports}}",
+            ],
+            text=True,
+        ).strip()
+
+        raw_ports = {} if output == "null" else json.loads(output)
+
+        ports: dict[int, list[_Port_Binding]] = {}
+        for port_spec, bindings in raw_ports.items():
+            container_port = int(port_spec.split("/")[0])  # "80/tcp" → 80
+            ports[container_port] = bindings
+
+        self._ports = ports
+        return ports
+
+    def get_port(self, internal_port: int) -> int | None:
         """Return the host port mapped to the given internal port."""
-        if self._port_mappings is None:
-            if not self.container_id:
-                raise RuntimeError("Container must be started before calling get_port")
+        mappings = self.inspect_port_mappings()
 
-            tpl = (
-                "{{range $p, $bindings := .NetworkSettings.Ports}}"
-                "{{if $bindings}}"
-                "{{$p}}:{{(index $bindings 0).HostPort}}|"
-                "{{end}}{{end}}"
-            )
+        if internal_port not in mappings:
+            return None
 
-            output = subprocess.check_output(
-                [self._get_podman(), "inspect", self.container_id, "--format", tpl],
-                text=True,
-            )
+        if len(mappings[internal_port]) == 0:
+            return None
 
-            mappings: dict[int, int] = {}
-            for part in output.split("|"):
-                part = part.strip()
-                if not part:  # skip empty parts completely
-                    continue
-                if ":" not in part:  # safety – should never happen
-                    continue
-                container_port_str, host_port_str = part.split(":", 1)
-                container_port = int(container_port_str.split("/")[0])
-                mappings[container_port] = int(host_port_str)
-
-            self._port_mappings = mappings
-
-        if internal_port not in self._port_mappings:
-            available = ", ".join(f"{k}→{v}" for k, v in sorted(self._port_mappings.items()))
-            raise KeyError(
-                f"No port mapping for container port {internal_port}. "
-                f"Available: {available or 'none'}"
-            )
-
-        return self._port_mappings[internal_port]
+        return int(mappings[internal_port][0]["HostPort"])
 
     # --------------------------------------------------------------------- #
     # Build podman run command
@@ -218,7 +226,7 @@ class Container:
             [self._get_podman(), "rm", "-f", self.container_id], capture_output=True, check=False
         )
         self.container_id = None
-        self._port_mappings = None
+        self._ports = None
 
     def exec(self, cmd: list[str]) -> subprocess.CompletedProcess[str]:
         """Run command inside container."""
