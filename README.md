@@ -1,11 +1,9 @@
 # podman-runner · Real, rootless Podman containers for Python tests & scripts
 
-
 [![PyPI version](https://img.shields.io/pypi/v/podman-runner?color=%2334D058&logo=pypi&logoColor=white)](https://pypi.org/project/podman-runner/)
 [![License: MIT](https://img.shields.io/github/license/francoisnt/podman-runner?color=blue)](#license)
 [![Python Version from PEP 621 TOML](https://img.shields.io/python/required-version-toml?tomlFilePath=https%3A%2F%2Fraw.githubusercontent.com%2Ffrancoisnt%2Fpodman-runner%2Frefs%2Fheads%2Fmain%2Fpyproject.toml)](https://pypi.org/project/pypi.org/project/podman-runner/)
-[![Coverage](https://img.shields.io/codecov/c/gh/francoisnt/podman-runner?logo=codecov)](https://codecov.io/gh/francoisnt/podman-runner)
-
+[![Codecov](https://img.shields.io/codecov/c/github/francoisnt/podman-runner?logo=codecov)](https://app.codecov.io/github/francoisnt/podman-runner)
 
 **The `testcontainers-python` experience — but daemonless, rootless, and built for Podman.**
 
