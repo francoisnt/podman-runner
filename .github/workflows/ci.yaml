@@ -29,7 +29,12 @@ jobs:
         run: uv sync --all-extras --frozen
 
       - name: Run unit tests
-        run: uv run task unit 
-
+        run: uv run pytest tests/unit --cov --cov-branch --cov-report=xml -n auto --dist=loadscope
+      
+      - name: Upload coverage reports to Codecov
+          uses: codecov/codecov-action@v5
+          with:   
+            token: ${{ secrets.CODECOV_TOKEN }}
+            
       - name: Run integration tests
         run: uv run task integration  

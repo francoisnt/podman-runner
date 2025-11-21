@@ -1,14 +1,10 @@
 # podman-runner · Real, rootless Podman containers for Python tests & scripts
 
-[![PyPI version](https://img.shields.io/pypi/v/podman-runner?color=%2334D058&logo=pypi&logoColor=white)](https://pypi.org/project/podman-runner/)
-[![Python versions](https://img.shields.io/pypi/pyversions/podman-runner.svg)](https://pypi.org/project/podman-runner/)
-[![CI](https://img.shields.io/github/actions/workflow/status/Francois-NT/podman-runner/ci.yml?branch=main&label=tests&logo=github)](https://github.com/Francois-NT/podman-runner/actions)
-[![Coverage](https://img.shields.io/codecov/c/gh/Francois-NT/podman-runner?logo=codecov)](https://codecov.io/gh/Francois-NT/podman-runner)
-[![License: MIT](https://img.shields.io/github/license/Francois-NT/podman-runner?color=blue)](#license)
 
 [![PyPI version](https://img.shields.io/pypi/v/podman-runner?color=%2334D058&logo=pypi&logoColor=white)](https://pypi.org/project/podman-runner/)
-[![Python versions](https://img.shields.io/pypi/pyversions/podman-runner.svg)](https://pypi.org/project/pypi.org/project/podman-runner/)
-[![License: MIT](https://img.shields.io/github/license/Francois-NT/podman-runner?color=blue)](#license)
+[![License: MIT](https://img.shields.io/github/license/francoisnt/podman-runner?color=blue)](#license)
+[![Python Version from PEP 621 TOML](https://img.shields.io/python/required-version-toml?tomlFilePath=https%3A%2F%2Fraw.githubusercontent.com%2Ffrancoisnt%2Fpodman-runner%2Frefs%2Fheads%2Fmain%2Fpyproject.toml)](https://pypi.org/project/pypi.org/project/podman-runner/)
+[![Coverage](https://img.shields.io/codecov/c/gh/francoisnt/podman-runner?logo=codecov)](https://codecov.io/gh/francoisnt/podman-runner)
 
 
 **The `testcontainers-python` experience — but daemonless, rootless, and built for Podman.**
