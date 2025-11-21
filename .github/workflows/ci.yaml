@@ -32,9 +32,9 @@ jobs:
         run: uv run pytest tests/unit --cov --cov-branch --cov-report=xml -n auto --dist=loadscope
       
       - name: Upload coverage reports to Codecov
-          uses: codecov/codecov-action@v5
-          with:   
-            token: ${{ secrets.CODECOV_TOKEN }}
-            
+        uses: codecov/codecov-action@v5
+        with:   
+          token: ${{ secrets.CODECOV_TOKEN }}
+
       - name: Run integration tests
         run: uv run task integration  
