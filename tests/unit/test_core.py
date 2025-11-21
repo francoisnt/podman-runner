@@ -113,8 +113,8 @@ def test_container_start_stop(config: ContainerConfig) -> None:
 
     sub_mock.assert_has_calls(
         [
-            call(["podman", "stop", "abc123"], capture_output=True, check=False),
-            call(["podman", "rm", "-f", "abc123"], capture_output=True, check=False),
+            call(["podman", "stop", "abc123"], capture_output=True, check=False, env=None),
+            call(["podman", "rm", "-f", "abc123"], capture_output=True, check=False, env=None),
         ]
     )
     assert c.container_id is None
@@ -155,6 +155,7 @@ def test_container_exec_success(config: ContainerConfig) -> None:
         check=True,
         capture_output=True,
         text=True,
+        env=None,
     )
     assert result == proc
 
@@ -176,7 +177,7 @@ def test_container_logs_no_options(config: ContainerConfig) -> None:
         patch("subprocess.check_output", return_value="logline\n") as co_mock,
     ):
         logs = c.logs()
-    co_mock.assert_called_once_with(["podman", "logs", "abc123"], text=True)
+    co_mock.assert_called_once_with(["podman", "logs", "abc123"], text=True, env=None)
     assert logs == "logline\n"
 
 
@@ -188,7 +189,9 @@ def test_container_logs_with_options(config: ContainerConfig) -> None:
         patch("subprocess.check_output") as co_mock,
     ):
         c.logs(follow=True, tail=5)
-    co_mock.assert_called_once_with(["podman", "logs", "--tail", "5", "-f", "abc123"], text=True)
+    co_mock.assert_called_once_with(
+        ["podman", "logs", "--tail", "5", "-f", "abc123"], text=True, env=None
+    )
 
 
 def test_container_check_status_running(config: ContainerConfig) -> None:

@@ -1,106 +1,96 @@
-# podman-runner · Simple, safe Podman containers for Python tests and scripts
+# podman-runner · Real, rootless Podman containers for Python tests & scripts
 
-[![PyPI](https://img.shields.io/pypi/v/podman-runner?color=blue)](https://pypi.org/project/podman-runner/)
-[![Podman-ready integration tests](https://img.shields.io/badge/integration%20tests-Podman--ready-brightgreen?style=flat&logo=podman&logoColor=white)](https://github.com/Francois-NT/podman-runner)
+[![PyPI version](https://img.shields.io/pypi/v/podman-runner?color=%2334D058&logo=pypi&logoColor=white)](https://pypi.org/project/podman-runner/)
+[![Python versions](https://img.shields.io/pypi/pyversions/podman-runner.svg)](https://pypi.org/project/podman-runner/)
+[![CI](https://img.shields.io/github/actions/workflow/status/Francois-NT/podman-runner/ci.yml?branch=main&label=tests&logo=github)](https://github.com/Francois-NT/podman-runner/actions)
+[![Coverage](https://img.shields.io/codecov/c/gh/Francois-NT/podman-runner?logo=codecov)](https://codecov.io/gh/Francois-NT/podman-runner)
+[![License: MIT](https://img.shields.io/github/license/Francois-NT/podman-runner?color=blue)](#license)
 
-**podman-runner** brings the convenience of `testcontainers` to the rootless, daemonless world of **Podman**.
+[![PyPI version](https://img.shields.io/pypi/v/podman-runner?color=%2334D058&logo=pypi&logoColor=white)](https://pypi.org/project/podman-runner/)
+[![Python versions](https://img.shields.io/pypi/pyversions/podman-runner.svg)](https://pypi.org/project/pypi.org/project/podman-runner/)
+[![License: MIT](https://img.shields.io/github/license/Francois-NT/podman-runner?color=blue)](#license)
 
-Start containers, wait for them to be ready, run commands, mount init scripts, map ports — all with a clean context-manager API and automatic cleanup.
 
-Perfect for integration tests, local development scripts, or anything that needs a real database/service without Docker.
+**The `testcontainers-python` experience — but daemonless, rootless, and built for Podman.**
+
+Spin up real databases, caches, and services with automatic health checks, port mapping, init scripts, and guaranteed cleanup — even on exceptions or Ctrl+C.
+
+Perfect for integration tests, local dev scripts, or any Python project that needs real services without Docker.
 
 ```python
 from podman_runner import Container, ContainerConfig
 
 with Container(
     ContainerConfig(
-        name="my-postgres",
+        name="my-pg",
         image="docker.io/library/postgres:16-alpine",
         env={"POSTGRES_PASSWORD": "secret"},
         health_cmd=["pg_isready", "-U", "postgres"],
     )
 ) as pg:
-    pg.exec(["psql", "-U", "postgres", "-c", "CREATE TABLE test(id serial);"])
-    # → container stops and is removed automatically
+    pg.exec(["psql", "-U", "postgres", "-c", "CREATE TABLE demo(id serial);"])
+    # Container is removed automatically when block exits
 ```
 
-## Features
+## Why podman-runner?
 
-- Context manager → guaranteed cleanup (even on exceptions or Ctrl-C)
-- Automatic health-check polling (`health_cmd`)
-- Smart port mapping (fixed or dynamic)
-- Auto-mount init scripts into `/docker-entrypoint-initdb.d`-style directories
-- Full volume and environment support
-- Detailed pre-flight checks that catch the most common Podman pitfalls (WSL shm, Docker conflict, socket not running, Snap sandbox, etc.)
-- 100% type-annotated, fully tested, zero external runtime dependencies
+| Feature                        | podman-runner | testcontainers-python | podman-py | Docker required? |
+|-------------------------------|---------------|------------------------|----------|------------------|
+| Rootless / daemonless         | Yes           | No                     | Yes      | No               |
+| Context manager + auto cleanup| Yes           | Yes                    | No       | —                |
+| Health-check polling          | Yes           | Yes                    | No       | —                |
+| Init script auto-mounting     | Yes           | No                     | No       | —                |
+| Dynamic & fixed port mapping  | Yes           | Yes                    | Partial  | —                |
+| Works in restricted CI        | Yes           | Rarely                 | Yes      | No               |
+| Zero runtime dependencies     | Yes           | No (heavy)             | Yes      | —                |
+| Smart preflight checks        | Yes           | No                     | No       | —                |
 
 ## Installation
 
 Requires **Podman ≥ 4.0** and **Python ≥ 3.11**.
 
 ```bash
+# Recommended — lightning fast
+uv pip install podman-runner
+
+# or classic pip
 pip install podman-runner
 ```
 
-Or with the fast `uv` tool (recommended):
+### Install Podman (one-liner per platform)
 
 ```bash
-uv pip install podman-runner
-```
+# Ubuntu / Debian
+sudo apt update && sudo apt install podman -y
 
-### Install Podman
+# Fedora / RHEL
+sudo dnf install podman -y
 
-```bash
-# Ubuntu/Debian
-sudo apt install podman
-
-# Fedora
-sudo dnf install podman
-
-# macOS (via Homebrew)
-brew install podman
-podman machine init
-podman machine start
+# macOS (Apple Silicon & Intel)
+brew install podman && podman machine init && podman machine start
 
 # Windows (WSL2 recommended)
-# See https://podman.io/getting-started/install.html
+# https://podman.io/docs/installation#windows
 ```
 
-## Quick Examples
-
-### Basic container
+## 30-Second Quick Start
 
 ```python
 from podman_runner import Container, ContainerConfig
 
-with Container(ContainerConfig(
-    name="demo",
-    image="docker.io/library/alpine:latest",
-    command=["sleep", "infinity"],
-)) as c:
-    print(c.exec(["echo", "Hello Podman!"]).stdout)
+with Container(
+    ContainerConfig(
+        name="pg-demo",
+        image="docker.io/library/postgres:16-alpine",
+        env={"POSTGRES_PASSWORD": "dev"},
+        health_cmd=["pg_isready", "-U", "postgres"],
+        ports={5432: None},  # auto-map to free host port
+    )
+) as pg:
+    print(f"Postgres ready at localhost:{pg.get_port(5432)}")
 ```
 
-### PostgreSQL with init scripts
-
-```python
-from pathlib import Path
-from podman_runner import Container, ContainerConfig
-
-script = Path("01-setup.sql")
-script.write_text("CREATE TABLE users(id serial PRIMARY KEY);\n")
-
-with Container(ContainerConfig(
-    name="pg-init",
-    image="docker.io/library/postgres:16-alpine",
-    env={"POSTGRES_PASSWORD": "secret"},
-    init_dir="/docker-entrypoint-initdb.d",
-    init_scripts=[script],
-    health_cmd=["pg_isready", "-U", "postgres"],
-)) as pg:
-    result = pg.exec(["psql", "-U", "postgres", "-c", "\\dt"])
-    print(result.stdout)
-```
+## Real-World Examples
 
 ### Redis with health check
 
@@ -113,7 +103,7 @@ with Container(ContainerConfig(
     assert r.exec(["redis-cli", "PING"]).stdout.strip() == "PONG"
 ```
 
-### Nginx with port mapping
+### Nginx — accessible from host
 
 ```python
 import requests
@@ -121,82 +111,101 @@ import requests
 with Container(ContainerConfig(
     name="web",
     image="docker.io/library/nginx:alpine",
-    ports={80: 8080},        # fixed host port
-    # ports={443: None},     # auto-assign free host port
+    ports={80: 8080},
 )) as web:
-    host_port = web.get_port(80)
-    resp = requests.get(f"http://localhost:{host_port}")
+    resp = requests.get("http://localhost:8080")
     assert resp.status_code == 200
 ```
 
-See the [`examples/`](examples/) directory for more.
+### Postgres + init scripts (official entrypoint style)
+
+```python
+from pathlib import Path
+
+Path("01-init.sql").write_text("CREATE TABLE users(id serial PRIMARY KEY);\n")
+
+with Container(ContainerConfig(
+    name="pg-init",
+    image="docker.io/library/postgres:16-alpine",
+    env={"POSTGRES_PASSWORD": "secret"},
+    init_dir="/docker-entrypoint-initdb.d",
+    init_scripts=[Path("01-init.sql")],
+    health_cmd=["pg_isready", "-U", "postgres"],
+)) as pg:
+    print(pg.exec(["psql", "-U", "postgres", "-c", "\\dt"]).stdout)
+```
+
+More examples → [`examples/`](examples/)
 
 ## API Reference
 
 ### `ContainerConfig`
 
-| Parameter          | Type                          | Description                                                                 |
-|--------------------|-------------------------------|-----------------------------------------------------------------------------|
-| `name`             | `str`                         | Unique container name (required)                                            |
-| `image`            | `str`                         | Image to run (required)                                                     |
-| `command`          | `list[str] \| None`           | Override container command                                                  |
-| `env`              | `dict[str, str] \| None`      | Environment variables                                                       |
-| `ports`            | `dict[int, int \| None] \| None`| `{container_port: host_port_or_None}` — `None` = auto-assign            |
-| `volumes`          | `dict[Path, str] \| None`     | Host path → container path (`:ro` suffix for read-only)                     |
-| `init_dir`         | `str \| None`                 | Target init directory (e.g. `"/docker-entrypoint-initdb.d"`)               |
-| `init_scripts`     | `list[Path] \| None`          | Scripts auto-mounted with `00-`, `01-` prefix and `:ro`                     |
-| `health_cmd`       | `list[str] \| None`           | Command that exits 0 when service is ready                                  |
-| `health_timeout`   | `int`                         | Seconds to wait for health check (default: 30)                              |
-| `health_interval`  | `float`                       | Seconds between health checks (default: 1.0)                                |
+| Parameter           | Type                          | Description |
+|---------------------|-------------------------------|-----------|
+| `name`              | `str`                         | Required — unique container name |
+| `image`             | `str`                         | Required — image to run |
+| `command`           | `list[str] \| None`           | Override entrypoint |
+| `env`               | `dict[str, str] \| None`      | Environment variables |
+| `ports`             | `dict[int, int \| None] \| None`| `{container_port: host_port_or_None}` |
+| `volumes`           | `dict[Path, str] \| None`      | Host → container path (`:ro` for read-only) |
+| `init_dir`          | `str \| None`                  | e.g. `"/docker-entrypoint-initdb.d"` |
+| `init_scripts`      | `list[Path] \| None`           | Auto-mounted with `00-`, `01-` prefix |
+| `health_cmd`        | `list[str] \| None`           | Command that exits 0 when ready |
+| `health_timeout`    | `int` (default 30)            | Seconds to wait |
+| `podman_host`       | `str \| None`                  | Remote Podman socket |
 
-### `Container`
+### `Container` methods
 
-| Method                        | Description                                                      |
-|-------------------------------|------------------------------------------------------------------|
-| `container_id: str \| None`   | Podman container ID after start                                  |
-| `start()`                     | Start container (called automatically in context manager)       |
-| `stop()`                      | Stop and remove container                                        |
-| `exec(cmd: list[str])`        | Run command inside container → `CompletedProcess`                |
-| `logs(tail: int \| None = None, follow=False)` | Get container logs                          |
-| `get_port(internal: int)`     | Return host port mapped to container port (or `None`)            |
-| `check_status()`              | Return current status string (`"running"`, `"exited"`, etc.)     |
+| Method                  | Returns                    | Description |
+|-------------------------|----------------------------|-----------|
+| `get_port(internal)`    | `int \| None`               | Host port for container port |
+| `exec(["cmd", ...])`    | `CompletedProcess[str]`    | Run command inside container |
+| `logs(tail=N)`          | `str`                      | Container logs |
+| `check_status()`        | `str`                      | `"running"`, `"exited"`, etc. |
+| `stop()`                | —                          | Stop + remove |
 
-## Development
+## Smart Preflight Checks
+
+On first import, `podman-runner` runs comprehensive checks and fails early with clear fixes:
+
+- Podman ≥ 4.0 in PATH
+- Socket running
+- Storage writable
+- Docker CLI conflict
+- WSL2 `/dev/shm` size
+- Snap sandbox detection
+
+No more cryptic crashes — you get helpful messages instead.
+
+## Development & Contributing
 
 ```bash
 git clone https://github.com/Francois-NT/podman-runner.git
 cd podman-runner
 
-# Install with dev dependencies
+# Blazing fast setup
 uv sync --all-extras
 
-# Install pre-commit hooks
+# Hooks + lint + tests
 uv run pre-commit install
-
-# Run tests
-uv run task unittest        # fast unit tests
-uv run task integration     # requires running Podman socket
+uv run pre-commit run --all-files
+uv run task test
 ```
 
-## Why Podman instead of Docker?
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) — contributions very welcome!
 
-- No daemon → works great in CI and restricted environments
-- Rootless by default
-- Full Docker CLI compatibility
-- Native on Linux, excellent macOS/Windows support via `podman machine`
+## Related Projects
 
-## Similar Projects
+- [`testcontainers-python`](https://github.com/testcontainers/testcontainers-python) – Docker-only
+- [`podman-py`](https://github.com/containers/podman-py) – raw bindings
+- [`podman-compose`](https://github.com/containers/podman-compose) – YAML orchestration
 
-| Project                     | Docker | Podman | Context Manager | Init Script Support | Health Polling |
-|-----------------------------|--------|--------|------------------|----------------------|----------------|
-| testcontainers-python      | Yes    | No     | Yes              | No                   | Yes            |
-| podman-compose              | No     | Yes    | No               | No                   | No             |
-| podman-py                   | No     | Yes    | No               | No                   | No             |
-| **podman-runner**           | No     | Yes    | Yes              | Yes                  | Yes            |
+**Only `podman-runner` gives you testcontainers-style ergonomics with full Podman rootless power.**
 
 ## License
 
-MIT © François Naggar-Tremblay
+[MIT © François Naggar-Tremblay](LICENSE)
 
 ---
 

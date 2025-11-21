@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import time
 from dataclasses import dataclass
@@ -45,6 +46,7 @@ class ContainerConfig:
     volumes: dict[Path, str] | None = None  # host → container
     health_cmd: list[str] | None = None
     command: list[str] | None = None
+    podman_host: str | None = None
 
 
 class Container:
@@ -67,9 +69,11 @@ class Container:
             Container._podman_exe = exe
         return Container._podman_exe
 
-    # --------------------------------------------------------------------- #
-    # Port mapping
-    # --------------------------------------------------------------------- #
+    def _get_env(self) -> dict[str, str] | None:
+        """Return environment variables with PODMAN_HOST if set."""
+        if self.config.podman_host:
+            return {**os.environ, "PODMAN_HOST": self.config.podman_host}
+        return None
 
     def inspect_port_mappings(self) -> dict[int, list[_Port_Binding]]:
         """Run `podman inspect` once and return a clean {container_port: host_port} dict."""
@@ -88,6 +92,7 @@ class Container:
                 "{{json .NetworkSettings.Ports}}",
             ],
             text=True,
+            env=self._get_env(),
         ).strip()
 
         raw_ports = {} if output == "null" else json.loads(output)
@@ -169,6 +174,7 @@ class Container:
                 capture_output=True,
                 text=True,
                 check=True,
+                env=self._get_env(),
             )
         except subprocess.CalledProcessError as e:
             cmd_str = " ".join(self._build_run_cmd())
@@ -196,6 +202,7 @@ class Container:
             [self._get_podman(), "inspect", self.container_id, "--format", "{{.State.Status}}"],
             capture_output=True,
             text=True,
+            env=self._get_env(),
         )
 
         return result.stdout.strip()
@@ -209,6 +216,7 @@ class Container:
             result = subprocess.run(  # noqa: S603
                 [self._get_podman(), "exec", self.container_id, *self.config.health_cmd],
                 capture_output=True,
+                env=self._get_env(),
             )
             if result.returncode == 0:
                 return
@@ -220,10 +228,16 @@ class Container:
         if not self.container_id:
             return
         subprocess.run(  # noqa: S603
-            [self._get_podman(), "stop", self.container_id], capture_output=True, check=False
+            [self._get_podman(), "stop", self.container_id],
+            capture_output=True,
+            check=False,
+            env=self._get_env(),
         )
         subprocess.run(  # noqa: S603
-            [self._get_podman(), "rm", "-f", self.container_id], capture_output=True, check=False
+            [self._get_podman(), "rm", "-f", self.container_id],
+            capture_output=True,
+            check=False,
+            env=self._get_env(),
         )
         self.container_id = None
         self._ports = None
@@ -238,6 +252,7 @@ class Container:
                 check=True,
                 capture_output=True,
                 text=True,
+                env=self._get_env(),
             )
         except subprocess.CalledProcessError as e:
             raise RuntimeError(
@@ -255,7 +270,7 @@ class Container:
         if follow:
             cmd += ["-f"]
         cmd += [self.container_id]
-        return subprocess.check_output(cmd, text=True)  # noqa: S603
+        return subprocess.check_output(cmd, text=True, env=self._get_env())  # noqa: S603
 
     # --------------------------------------------------------------------- #
     # Context manager

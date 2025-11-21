@@ -5,8 +5,7 @@ from podman_runner import Container, ContainerConfig
 config = ContainerConfig(
     name="port-example",
     image="docker.io/library/nginx:alpine",
-    ports={80: 8080, 443: None},  # fixed: container:80 → host:8080
-    # 443 will be auto-mapped to a free port
+    ports={80: None, 443: None},  # 80 and 443 will be auto-mapped to a free port
 )
 
 with Container(config) as c:
