@@ -10,7 +10,7 @@ repos:
 
       - id: unittests
         name: Unit tests
-        entry: uv run task unittest
+        entry: uv run task unit
         language: system
         pass_filenames: false
 

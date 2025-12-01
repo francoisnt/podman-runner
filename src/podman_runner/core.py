@@ -14,10 +14,6 @@ from .preflight import run_preflight_checks
 __all__ = ["Container", "ContainerConfig"]
 
 
-# Run preflight checks on import
-run_preflight_checks()
-
-
 class _Port_Binding(TypedDict):
     HostIp: str
     HostPort: str
@@ -53,6 +49,13 @@ class Container:
     """Lifecycle-managed Podman container with context manager support."""
 
     _podman_exe: str | None = None
+
+    _checked_env: bool = False
+
+    def _run_preflight_checks(self) -> None:
+        if not Container._checked_env:
+            run_preflight_checks()
+            Container._checked_env = True
 
     def __init__(self, config: ContainerConfig):
         """Initialize a container."""
@@ -167,6 +170,7 @@ class Container:
     # --------------------------------------------------------------------- #
     def start(self) -> Container:
         """Start container and wait for health check."""
+        self._run_preflight_checks()
         self.stop()
         try:
             result = subprocess.run(  # noqa: S603
@@ -221,7 +225,9 @@ class Container:
             if result.returncode == 0:
                 return
             time.sleep(self.config.health_interval)
-        raise TimeoutError(f"Container {self.config.name} did not become ready in 30s")
+        raise TimeoutError(
+            f"Container {self.config.name} did not become ready in {self.config.health_timeout}s"
+        )
 
     def stop(self) -> None:
         """Stop and remove container."""

@@ -56,7 +56,7 @@ class TestDoubleStart:
         assert podman_container.container_id != first_id
 
 
-class TestLyfecycle:
+class TestLifecycle:
     def test_container_stop(self, podman_container: Container, podman_exe: str) -> None:
         """Test that stopping the container removes it from podman ps --all."""
         assert podman_container.container_id is not None

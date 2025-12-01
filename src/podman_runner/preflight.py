@@ -9,7 +9,9 @@ from pathlib import Path
 
 from .helpers import get_podman_exe
 
-PODMAN_EXE = get_podman_exe()
+
+def _podman_exe() -> str:
+    return get_podman_exe()
 
 
 # --------------------------------------------------------------------------- #
@@ -30,7 +32,9 @@ def _check_podman_in_path() -> None:
 
 
 def _check_podman_version() -> None:
-    result = subprocess.run([PODMAN_EXE, "--version"], capture_output=True, text=True, check=False)  # noqa: S603
+    result = subprocess.run(  # noqa: S603
+        [_podman_exe(), "--version"], capture_output=True, text=True, check=False
+    )
     if result.returncode != 0:
         return  # Already failed in PATH check
     import re
@@ -48,7 +52,7 @@ def _check_podman_version() -> None:
 
 def _check_podman_socket() -> None:
     result = subprocess.run(  # noqa: S603
-        [PODMAN_EXE, "info", "--format", "{{.Host.RemoteSocket.Exists}}"],
+        [_podman_exe(), "info", "--format", "{{.Host.RemoteSocket.Exists}}"],
         capture_output=True,
         text=True,
         check=False,
@@ -63,7 +67,7 @@ def _check_podman_socket() -> None:
 
 def _check_storage_writable() -> None:
     result = subprocess.run(  # noqa: S603
-        [PODMAN_EXE, "info", "--format", "{{.Store.GraphRoot}}"],
+        [_podman_exe(), "info", "--format", "{{.Store.GraphRoot}}"],
         capture_output=True,
         text=True,
         check=False,
@@ -96,7 +100,11 @@ def _check_docker_conflict() -> None:
 
 
 def _check_wsl_shm() -> None:
-    if not Path("/proc/version").read_text().lower().startswith("microsoft"):
+    proc_path = Path("/proc/version")
+    if not proc_path.exists():
+        return  # Not Linux → not WSL
+    proc = proc_path.read_text().lower()
+    if "microsoft" not in proc:
         return  # Not WSL
     shm_size = Path("/dev/shm").stat().st_size  # noqa: S108
     if shm_size < 64 * 1024 * 1024:  # < 64MB

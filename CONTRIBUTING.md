@@ -32,6 +32,6 @@ uv run pre-commit install
 # 4. Verify setup (lint + tests)
 uv run pre-commit run --all-files   # runs ruff, mypy, unit tests
 uv run mypy                         # type checking
-uv run task unittest                # fast unit tests
-uv run task integrationtest         # requires running Podman socket
+uv run task unit                    # fast unit tests
+uv run task integration             # requires running Podman socket
 ```

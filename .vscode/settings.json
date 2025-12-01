@@ -18,10 +18,15 @@
    "mypy-type-checker.importStrategy": "fromEnvironment",
    "ruff.configurationPreference": "filesystemFirst",
    "ruff.format.backend": "uv",
+   "ruff.format.enable": true,
+   "ruff.lint.enable": true,
    "terminal.integrated.env.linux": {
       "XDG_DATA_HOME": "${env:HOME}/.local/share"
    },
-  "python.analysis.extraPaths": [
-    "./src"
-  ],
+   "python.analysis.extraPaths": [
+      "./src"
+   ],
+   "editor.formatOnSave": true,
+   "python.experiments.optInto": [],
+   "python.experiments.enabled": false,
 }
