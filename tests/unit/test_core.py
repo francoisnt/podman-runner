@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import subprocess
+from collections.abc import Generator
 from pathlib import Path
 from unittest.mock import MagicMock, call, patch
 
@@ -18,6 +19,13 @@ def config(container_prefix: str) -> ContainerConfig:
         image="alpine:latest",
         command=["sleep", "10"],
     )
+
+
+@pytest.fixture(autouse=True)
+def mock_preflight() -> Generator[None, None, None]:
+    """Mock preflight checks for all unit tests."""
+    with patch("podman_runner.core.run_preflight_checks"):
+        yield
 
 
 def test_build_run_cmd_no_options(container_prefix: str, config: ContainerConfig) -> None:
